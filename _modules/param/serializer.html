@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta charset="utf-8"/>
+<title>param.serializer — Param 1.10.1 documentation</title>
+<meta content="Declarative Python programming using Parameters." name="description"/>
+<meta content="HoloViz authors" name="author"/>
+<!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.16/webfont.js"></script>
+<script>
+    WebFont.load({
+      google: {
+        families: ['Source Sans Pro']
+      }
+    });
+  </script>
+<!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="../../_static/css/main.css" rel="stylesheet"/>
+<link href="../../_static/nbsite.css" rel="stylesheet"/>
+<!-- Scripts
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script async="" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML" type="text/javascript">
+</script>
+<script src="../../_static/js/main.js"></script>
+<script src="../../_static/nbsite.js"></script>
+<script src="../../_static/require.js"></script>
+<!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="../../_static/favicon.ico" rel="icon" type="image/png"/>
+<!-- Canonical
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+<link href="/_modules/param/serializer.html" rel="canonical">
+</link></head>
+<body class="">
+<header class="navigation">
+<div class="wrapper">
+<a class="logo" href="../../index.html">
+<img alt="Logo" src="../../_static/logo.png"/>
+</a>
+<a class="navigation-menu logo-text" href="../../index.html">Param</a>
+<a class="navigation-menu-button" href="javascript:void(0)" id="js-mobile-menu">Menu</a>
+<nav>
+<ul class="navigation-menu show" id="js-navigation-menu">
+<li class="nav-link doc-head"><a href="../../Reference_Manual/param.html">API</a></li>
+<li class="nav-link doc-head"><a href="../../About.html">About</a></li>
+</ul>
+</nav>
+</div>
+</header>
+<!-- MAIN BODY OF DOCS –––––––––––––––––– -->
+<div class="docs section">
+<div id="hacketyhackhack"> <!-- style="width:20%;margin-right: 100px;"> --> <!--style="display: none;"> style="display:none;"> -->
+<div class="toc" style="width:15%; margin-right:20px;">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Reference_Manual/param.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../About.html">About</a></li>
+</ul>
+</div>
+</div>
+<div class="content"> <!-- style="max-width:80%;margin-left:auto;margin-right: auto;">-->
+<h1>Source code for param.serializer</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Classes used to support string serialization of Parameters and</span>
+<span class="sd">Parameterized objects.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+
+<div class="viewcode-block" id="UnserializableException"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.UnserializableException">[docs]</a><span class="k">class</span> <span class="nc">UnserializableException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="UnsafeserializableException"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.UnsafeserializableException">[docs]</a><span class="k">class</span> <span class="nc">UnsafeserializableException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="JSONNullable"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.JSONNullable">[docs]</a><span class="k">def</span> <span class="nf">JSONNullable</span><span class="p">(</span><span class="n">json_type</span><span class="p">):</span>
+    <span class="s2">"Express a JSON schema type as nullable to easily support Parameters that allow_None"</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="s2">"anyOf"</span><span class="p">:</span> <span class="p">[</span> <span class="n">json_type</span><span class="p">,</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"null"</span><span class="p">}]</span> <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="Serialization"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.Serialization">[docs]</a><span class="k">class</span> <span class="nc">Serialization</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">"""</span>
+<span class="sd">    Base class used to implement different types of serialization.</span>
+<span class="sd">    """</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>        <span class="c1"># noqa: unimplemented method</span>
+
+<div class="viewcode-block" id="Serialization.serialize_parameters"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.Serialization.serialize_parameters">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">serialize_parameters</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Serialize the parameters on a Parameterized object into a</span>
+<span class="sd">        single serialized object, e.g. a JSON string.</span>
+<span class="sd">        """</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>        <span class="c1"># noqa: unimplemented method</span></div>
+
+<div class="viewcode-block" id="Serialization.deserialize_parameters"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.Serialization.deserialize_parameters">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">deserialize_parameters</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">serialized</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Deserialize a serialized object representing one or</span>
+<span class="sd">        more Parameters into a dictionary of parameter values.</span>
+<span class="sd">        """</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>        <span class="c1"># noqa: unimplemented method</span></div>
+
+<div class="viewcode-block" id="Serialization.serialize_parameter_value"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.Serialization.serialize_parameter_value">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">serialize_parameter_value</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">pname</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Serialize a single parameter value.</span>
+<span class="sd">        """</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>        <span class="c1"># noqa: unimplemented method</span></div>
+
+<div class="viewcode-block" id="Serialization.deserialize_parameter_value"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.Serialization.deserialize_parameter_value">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">deserialize_parameter_value</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">pname</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">"""</span>
+<span class="sd">        Deserialize a single parameter value.</span>
+<span class="sd">        """</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>        <span class="c1"># noqa: unimplemented method</span></div></div>
+
+
+<div class="viewcode-block" id="JSONSerialization"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.JSONSerialization">[docs]</a><span class="k">class</span> <span class="nc">JSONSerialization</span><span class="p">(</span><span class="n">Serialization</span><span class="p">):</span>
+    <span class="sd">"""</span>
+<span class="sd">    Class responsible for specifying JSON serialization, deserialization</span>
+<span class="sd">    and JSON schemas for Parameters and Parameterized classes and</span>
+<span class="sd">    objects.</span>
+<span class="sd">    """</span>
+
+    <span class="n">unserializable_parameter_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Callable'</span><span class="p">]</span>
+
+    <span class="n">json_schema_literal_types</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">:</span><span class="s1">'integer'</span><span class="p">,</span> <span class="nb">float</span><span class="p">:</span><span class="s1">'number'</span><span class="p">,</span> <span class="nb">str</span><span class="p">:</span><span class="s1">'string'</span><span class="p">,</span>
+                                 <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">):</span><span class="s1">'null'</span><span class="p">}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">loads</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">serialized</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">serialized</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">dumps</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pobj</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">objects</span><span class="p">(</span><span class="s1">'existing'</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">subset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">schema</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">schema</span><span class="p">(</span><span class="n">safe</span><span class="o">=</span><span class="n">safe</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">doc</span><span class="p">:</span>
+                <span class="n">schema</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s2">"description"</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">label</span><span class="p">:</span>
+                <span class="n">schema</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s2">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">label</span>
+        <span class="k">return</span> <span class="n">schema</span>
+
+<div class="viewcode-block" id="JSONSerialization.serialize_parameters"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.JSONSerialization.serialize_parameters">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">serialize_parameters</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">components</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pobj</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">objects</span><span class="p">(</span><span class="s1">'existing'</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">subset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">pobj</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">get_value_generator</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">components</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">components</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JSONSerialization.deserialize_parameters"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.JSONSerialization.deserialize_parameters">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">deserialize_parameters</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">serialization</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">deserialized</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">serialization</span><span class="p">)</span>
+        <span class="n">components</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">deserialized</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">subset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">subset</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">deserialized</span> <span class="o">=</span> <span class="n">pobj</span><span class="o">.</span><span class="n">param</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">components</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">deserialized</span>
+        <span class="k">return</span> <span class="n">components</span></div>
+
+    <span class="c1"># Parameter level methods</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_get_method</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">ptype</span><span class="p">,</span> <span class="n">suffix</span><span class="p">):</span>
+        <span class="s2">"Returns specialized method if available, otherwise None"</span>
+        <span class="n">method_name</span> <span class="o">=</span> <span class="n">ptype</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">+</span><span class="s1">'_'</span> <span class="o">+</span> <span class="n">suffix</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parameter_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">ptype</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ptype</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">unserializable_parameter_types</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnserializableException</span>
+        <span class="n">dispatch_method</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_get_method</span><span class="p">(</span><span class="n">ptype</span><span class="p">,</span> <span class="s1">'schema'</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dispatch_method</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">dispatch_method</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="n">safe</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="n">ptype</span><span class="o">.</span><span class="n">lower</span><span class="p">()}</span>
+
+        <span class="k">return</span> <span class="n">JSONNullable</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">allow_None</span> <span class="k">else</span> <span class="n">schema</span>
+
+<div class="viewcode-block" id="JSONSerialization.serialize_parameter_value"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.JSONSerialization.serialize_parameter_value">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">serialize_parameter_value</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">pname</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">pobj</span><span class="o">.</span><span class="n">param</span><span class="o">.</span><span class="n">get_value_generator</span><span class="p">(</span><span class="n">pname</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">pobj</span><span class="o">.</span><span class="n">param</span><span class="p">[</span><span class="n">pname</span><span class="p">]</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="JSONSerialization.deserialize_parameter_value"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.JSONSerialization.deserialize_parameter_value">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">deserialize_parameter_value</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">pobj</span><span class="p">,</span> <span class="n">pname</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pobj</span><span class="o">.</span><span class="n">param</span><span class="p">[</span><span class="n">pname</span><span class="p">]</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+
+    <span class="c1"># Custom Schemas</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">array_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">safe</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'Array is not guaranteed to be safe for '</span>
+                   <span class="s1">'serialization as the dtype is unknown'</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">UnsafeserializableException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"array"</span><span class="p">}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">dict_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">safe</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'Dict is not guaranteed to be safe for '</span>
+                   <span class="s1">'serialization as the key and value types are unknown'</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">UnsafeserializableException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"object"</span><span class="p">}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">date_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"string"</span><span class="p">,</span> <span class="s2">"format"</span><span class="p">:</span> <span class="s2">"date-time"</span><span class="p">}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">calendardate_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"string"</span><span class="p">,</span> <span class="s2">"format"</span><span class="p">:</span> <span class="s2">"date"</span><span class="p">}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">tuple_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"array"</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">length</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'minItems'</span><span class="p">]</span> <span class="o">=</span>  <span class="n">p</span><span class="o">.</span><span class="n">length</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'maxItems'</span><span class="p">]</span> <span class="o">=</span>  <span class="n">p</span><span class="o">.</span><span class="n">length</span>
+        <span class="k">return</span> <span class="n">schema</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">number_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="p">}</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">declare_numeric_bounds</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">inclusive_bounds</span><span class="p">)</span>
+
+<div class="viewcode-block" id="JSONSerialization.declare_numeric_bounds"><a class="viewcode-back" href="../../Reference_Manual/param.html#param.serializer.JSONSerialization.declare_numeric_bounds">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">declare_numeric_bounds</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">inclusive_bounds</span><span class="p">):</span>
+        <span class="s2">"Given an applicable numeric schema, augment with bounds information"</span>
+        <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">)</span> <span class="o">=</span> <span class="n">bounds</span>
+            <span class="k">if</span> <span class="n">low</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="s1">'minimum'</span> <span class="k">if</span> <span class="n">inclusive_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">else</span> <span class="s1">'exclusiveMinimum'</span>
+                <span class="n">schema</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">low</span>
+            <span class="k">if</span> <span class="n">high</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="s1">'maximum'</span> <span class="k">if</span> <span class="n">inclusive_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">else</span> <span class="s1">'exclusiveMaximum'</span>
+                <span class="n">schema</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">high</span>
+        <span class="k">return</span> <span class="n">schema</span></div>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">integer_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">number_schema</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">numerictuple_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">tuple_schema</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="n">safe</span><span class="p">)</span>
+        <span class="n">schema</span><span class="p">[</span><span class="s2">"additionalItems"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"number"</span> <span class="p">}</span>
+        <span class="k">return</span> <span class="n">schema</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">xycoordinates_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">numerictuple_schema</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="n">safe</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">range_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span>  <span class="bp">cls</span><span class="o">.</span><span class="n">tuple_schema</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="n">safe</span><span class="p">)</span>
+        <span class="n">bounded_number</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">declare_numeric_bounds</span><span class="p">({</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"number"</span> <span class="p">},</span>
+                                                    <span class="n">p</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">inclusive_bounds</span><span class="p">)</span>
+        <span class="n">schema</span><span class="p">[</span><span class="s2">"additionalItems"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bounded_number</span>
+        <span class="k">return</span> <span class="n">schema</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">list_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span>  <span class="p">{</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"array"</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">safe</span> <span class="ow">is</span> <span class="kc">True</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">class_</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'List without a class specified cannot be guaranteed '</span>
+                   <span class="s1">'to be safe for serialization'</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">UnsafeserializableException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">class_</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">class_</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">json_schema_literal_types</span><span class="p">:</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'items'</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">json_schema_literal_types</span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">class_</span><span class="p">]}</span>
+        <span class="k">return</span> <span class="n">schema</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">objectselector_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">allowed_types</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">'type'</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">json_schema_literal_types</span><span class="p">[</span><span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)]}</span>
+                             <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">objects</span><span class="p">]</span>
+            <span class="n">schema</span> <span class="o">=</span>  <span class="p">{</span> <span class="s2">"anyOf"</span><span class="p">:</span> <span class="n">allowed_types</span><span class="p">}</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'enum'</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">objects</span>
+            <span class="k">return</span> <span class="n">schema</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">safe</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'ObjectSelector cannot be guaranteed to be safe for '</span>
+                       <span class="s1">'serialization due to unserializable type in objects'</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">UnsafeserializableException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">listselector_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">objects</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">safe</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'ListSelector cannot be guaranteed to be safe for '</span>
+                       <span class="s1">'serialization as allowed objects unspecified'</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">'type'</span><span class="p">:</span> <span class="s1">'array'</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">objects</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">json_schema_literal_types</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">"ListSelector cannot serialize type </span><span class="si">%s</span><span class="s2">"</span> <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">UnserializableException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">'type'</span><span class="p">:</span> <span class="s1">'array'</span><span class="p">,</span> <span class="s1">'items'</span><span class="p">:{</span><span class="s1">'enum'</span><span class="p">:</span><span class="n">p</span><span class="o">.</span><span class="n">objects</span><span class="p">}}</span>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">dataframe_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'type'</span><span class="p">:</span> <span class="s1">'array'</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">safe</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'DataFrame is not guaranteed to be safe for '</span>
+                   <span class="s1">'serialization as the column dtypes are unknown'</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">UnsafeserializableException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'items'</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'type'</span><span class="p">:</span> <span class="s1">'object'</span><span class="p">}</span>
+            <span class="k">return</span> <span class="n">schema</span>
+
+        <span class="n">mincols</span><span class="p">,</span> <span class="n">maxcols</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">mincols</span><span class="p">,</span> <span class="n">maxcols</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">mincols</span><span class="p">,</span> <span class="n">maxcols</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'items'</span><span class="p">]</span> <span class="o">=</span>  <span class="p">{</span><span class="s1">'type'</span><span class="p">:</span> <span class="s1">'object'</span><span class="p">,</span>
+                                <span class="s1">'minItems'</span><span class="p">:</span> <span class="n">mincols</span><span class="p">,</span>
+                                <span class="s1">'maxItems'</span><span class="p">:</span> <span class="n">maxcols</span><span class="p">}</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+            <span class="n">literal_types</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">'type'</span><span class="p">:</span><span class="n">el</span><span class="p">}</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">json_schema_literal_types</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+            <span class="n">allowable_types</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"anyOf"</span><span class="p">:</span> <span class="n">literal_types</span><span class="p">}</span>
+            <span class="n">properties</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">allowable_types</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">}</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'items'</span><span class="p">]</span> <span class="o">=</span>  <span class="p">{</span><span class="s1">'type'</span><span class="p">:</span> <span class="s1">'object'</span><span class="p">,</span>
+                                <span class="s1">'properties'</span> <span class="p">:</span> <span class="n">properties</span> <span class="p">}</span>
+
+
+        <span class="n">minrows</span><span class="p">,</span> <span class="n">maxrows</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">rows</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">minrows</span><span class="p">,</span> <span class="n">maxrows</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">rows</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">rows</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">rows</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">minrows</span><span class="p">,</span> <span class="n">maxrows</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">rows</span>
+
+        <span class="k">if</span> <span class="n">minrows</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'minItems'</span><span class="p">]</span> <span class="o">=</span> <span class="n">minrows</span>
+        <span class="k">if</span> <span class="n">maxrows</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">schema</span><span class="p">[</span><span class="s1">'maxItems'</span><span class="p">]</span> <span class="o">=</span> <span class="n">maxrows</span>
+
+        <span class="k">return</span> <span class="n">schema</span></div>
+</pre></div>
+</div>
+</div>
+<!-- END MAIN BODY OF DOCS ––––––––––––– -->
+<footer class="footer">
+<div class="footer-links">
+<ul>
+<li><span class="footer-title">Links</span></li>
+<li><a href="../../Reference_Manual/param.html">API</a></li>
+<li><a href="../../About.html">About</a></li>
+</ul>
+<ul>
+<li><span class="footer-title">Join Us</span></li>
+<li><a href="//gitter.im/pyviz/pyviz">Gitter</a></li>
+<li><a href="//github.com/ioam/param">Github</a></li>
+</ul>
+<ul class="copyright">
+<li>© 2005-2018, HoloViz authors</li>
+</ul>
+</div>
+</footer>
+<!-- Google Analytics -->
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-154795830-6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-154795830-6', { 'anonymize_ip': true });
+</script>
+<!-- MathJax Config -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+<!-- End Document
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>
